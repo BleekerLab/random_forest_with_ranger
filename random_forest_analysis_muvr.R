@@ -358,7 +358,7 @@ if (args$best_params == TRUE){
        hyper_grid,         # --best_params flag "on"
        optimization_plot,  # --best_params flag "on"
        model_permutation_plot,
-       file = "rf_analysis.RData",
+       file = file.path(args$outdir, "rf_analysis.RData"),
        compress = "gzip",
        compression_level = 6)
 } else {
@@ -368,7 +368,7 @@ if (args$best_params == TRUE){
        rf_model,
        params_df,
        model_permutation_plot,
-       file = "rf_analysis.RData",
+       file = file.path(args$outdir, "rf_analysis.RData"),
        compress = "gzip",
        compression_level = 6)
 }
