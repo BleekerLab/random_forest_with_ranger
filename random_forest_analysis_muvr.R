@@ -304,13 +304,10 @@ pvalue <- pPerm(actual = actual_fit,
                 side = "greater",
                 type = "t")
 
-plotPerm(actual = actual_fit, 
-         xlab = "Q2 metric",
-         h0 = perm_fit) 
 
-
-perm_fit_df = data.frame(permutation = seq(1:length(perm_fit)), 
-                         q2 = perm_fit) 
+perm_fit_df = data.frame(
+  permutation = seq(1:length(perm_fit)), 
+  q2 = perm_fit) 
 
 model_permutation_plot <- ggplot(perm_fit_df, aes(x = q2)) + 
   geom_histogram(bins = 10) + 
@@ -348,6 +345,8 @@ params_df <- data.frame(
     n_permutations = args$n_permutations,
     model =          args$model)
 
+
+dir.create(path = args$outdir, showWarnings = FALSE, recursive = TRUE)
 
 if (args$best_params == TRUE){
   save(df,
