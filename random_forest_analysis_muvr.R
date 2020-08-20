@@ -280,9 +280,16 @@ for (p in 1:n_permutations) {
               method    = "RF", 
               parallel  = TRUE)
   # for model
-  perm_fit[p] = perm$fitMetric$Q2
+  if (args$model == "min"){
+    perm_fit[p] <- perm$fitMetric$Q2[1] # min model
+  } else if (args$model == "mid") {
+    perm_fit[p] <- perm$fitMetric$Q2[2] # mid model
+  } else if (args$model == "max") {
+    perm_fit[p] <- perm$fitMetric$Q2[3] # max model
+  } 
+
   # for each variable
-  features_permuted_pvalues_matrix[,p] = as.vector(perm$VIP[,"min"])
+  features_permuted_pvalues_matrix[,p] = as.vector(perm$VIP[,args$model])
 }
 
 ###########################################################
@@ -357,6 +364,7 @@ if (args$best_params == TRUE){
        hyper_grid,         # --best_params flag "on"
        optimization_plot,  # --best_params flag "on"
        model_permutation_plot,
+       features_permuted_pvalues_matrix,
        file = file.path(args$outdir, "rf_analysis.RData"),
        compress = "gzip",
        compression_level = 6)
@@ -367,6 +375,7 @@ if (args$best_params == TRUE){
        rf_model,
        params_df,
        model_permutation_plot,
+       features_permuted_pvalues_matrix,
        file = file.path(args$outdir, "rf_analysis.RData"),
        compress = "gzip",
        compression_level = 6)
