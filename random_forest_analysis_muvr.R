@@ -348,17 +348,30 @@ params_df <- data.frame(
     n_permutations = args$n_permutations,
     model =          args$model)
 
-save(df,
-     X,
-     y,
-     rf_model,
-     hyper_grid,
-     params_df,
-     optimization_plot,
-     model_permutation_plot,
-     file = "rf_analysis.RData",
-     compress = "gzip",
-     compression_level = 6)
+
+if (args$best_params == TRUE){
+  save(df,
+       X,
+       y,
+       rf_model,
+       params_df,
+       hyper_grid,         # --best_params flag "on"
+       optimization_plot,  # --best_params flag "on"
+       model_permutation_plot,
+       file = "rf_analysis.RData",
+       compress = "gzip",
+       compression_level = 6)
+} else {
+  save(df,
+       X,
+       y,
+       rf_model,
+       params_df,
+       model_permutation_plot,
+       file = "rf_analysis.RData",
+       compress = "gzip",
+       compression_level = 6)
+}
 
 
 
