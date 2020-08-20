@@ -14,8 +14,8 @@ RUN R -e "install.packages('doParallel', version = '1.0.14')" \
 
 # add R scripts 
 WORKDIR /home/
-COPY ["./random_forest_with_muvr.R",  "/home/"]
+COPY ["./random_forest_analysis_muvr.R",  "/home/"]
 
-ENTRYPOINT ["Rscript", "/home/random_forest_with_muvr.R"]
+ENTRYPOINT ["Rscript", "/home/random_forest_analysis_muvr.R"]
 
 
