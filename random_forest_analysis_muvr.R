@@ -403,6 +403,9 @@ if (args$best_params == TRUE){
        compression_level = 6)
 }
 
+cat("\n############################################################################\n")
+cat("\nSection 5: Results saved to", file.path(args$outdir, "rf_analysis.RData"), "\n")
+cat("\n############################################################################\n")
 
 
 stopCluster(cl)
