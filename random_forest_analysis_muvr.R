@@ -148,7 +148,6 @@ if (args$best_params == TRUE){
     
     rf_model <- MUVR(X =        X, 
                      Y =        y,
-                     ID =       IDs,
                      nRep =     args$n_reps,
                      nOuter =   args$n_outer,
                      nInner =   args$n_inner,
@@ -181,6 +180,11 @@ if (args$best_params == TRUE){
     ggplot(., aes(combination, y = q2)) + 
     geom_point() + 
     scale_y_continuous(limits = c(0,1))
+  
+  cat("\n#####################################################################\n")
+  cat("\nSection 2: searching for best parameters done!                       \n")
+  cat("\nUsing ", best_params$ratio," as variable ratio                       \n")
+  cat("\n#####################################################################\n")
   
 } else {
   cat("\n#####################################################################\n")
