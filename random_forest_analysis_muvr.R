@@ -330,7 +330,29 @@ model_permutation_plot <- ggplot(perm_fit_df, aes(x = q2)) +
 ### 4.3: extract significant p-values for each variable ###
 ###########################################################
 
+m <- t(features_permuted_pvalues_matrix)
+original_vips <- rf_model$VIP[,"min"]
+n_permutations <- args$n_permutations
+p_values <- vector(mode = "numeric", length = ncol(m))
 
+# Count how many times the original VIP was inferior to permuted VIPs 
+for (i in seq_along(1:nrow(m))) {
+  permuted_vips = as.vector(m[i,])
+  pvalue = sum(ooriginal_vips[i] < permuted_vips / n_permutations)
+  p_values[i] = pvalue
+}
+
+# Values equal to 0 are impossible so replace with inferior to threshold 1/N permutations
+p_values[p_values == 0] <- paste("p <",round(1/n_permutations, digits = 3))
+
+# Create final dataframe containing variables + p-values
+features_pvalues_df = 
+  features_permuted_pvalues_matrix %>% 
+  as.data.frame() %>% 
+  rownames_to_column("feature") %>% 
+  mutate(original = original_vips, p_value = p_values)  
+  
+  
 cat("\n###########################################\n")
 cat("\nSection 4: Permutation analysis completed. \n")
 cat("\n###########################################\n")
@@ -364,7 +386,7 @@ if (args$best_params == TRUE){
        hyper_grid,         # --best_params flag "on"
        optimization_plot,  # --best_params flag "on"
        model_permutation_plot,
-       features_permuted_pvalues_matrix,
+       features_pvalues_df,
        file = file.path(args$outdir, "rf_analysis.RData"),
        compress = "gzip",
        compression_level = 6)
@@ -375,7 +397,7 @@ if (args$best_params == TRUE){
        rf_model,
        params_df,
        model_permutation_plot,
-       features_permuted_pvalues_matrix,
+       features_pvalues_df,
        file = file.path(args$outdir, "rf_analysis.RData"),
        compress = "gzip",
        compression_level = 6)
