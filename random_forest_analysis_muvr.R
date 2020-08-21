@@ -338,7 +338,7 @@ p_values <- vector(mode = "numeric", length = ncol(m))
 # Count how many times the original VIP was inferior to permuted VIPs 
 for (i in seq_along(1:nrow(m))) {
   permuted_vips = as.vector(m[i,])
-  pvalue = sum(ooriginal_vips[i] < permuted_vips / n_permutations)
+  pvalue = sum(original_vips[i] < permuted_vips / n_permutations)
   p_values[i] = pvalue
 }
 
