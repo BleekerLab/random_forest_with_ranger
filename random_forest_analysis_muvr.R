@@ -335,7 +335,7 @@ model_permutation_plot <- ggplot(perm_fit_df, aes(x = q2)) +
 ###########################################################
 
 m <- t(features_permuted_pvalues_matrix)
-original_vips <- rf_model$VIP[,"min"]
+original_vips <- rf_model$VIP[,args$model]
 n_permutations <- args$n_permutations
 p_values <- vector(mode = "numeric", length = ncol(m))
 
