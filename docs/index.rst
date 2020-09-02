@@ -12,6 +12,7 @@ Summary
    :maxdepth: 1
    :caption: Getting started:
    :name: getting_started
+
    getting_started/installation
 
 
