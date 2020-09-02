@@ -15,12 +15,7 @@ Summary
 
    getting_started/installation
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+-------
+Citation
+-------
+Cite if needed. 
