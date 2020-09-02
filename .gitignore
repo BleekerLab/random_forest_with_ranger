@@ -39,3 +39,4 @@ vignettes/*.pdf
 .Renviron
 random_forest_with_muvr.Rproj
 data/
+_build/

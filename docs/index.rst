@@ -9,8 +9,9 @@ Summary
 -------
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Getting started:
+   :caption: Getting started
    :name: getting_started
+   :hidden:
+   :maxdepth: 1
 
    getting_started/installation
