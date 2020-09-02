@@ -14,8 +14,3 @@ Summary
    :name: getting_started
 
    getting_started/installation
-
--------
-Citation
--------
-Cite if needed. 
