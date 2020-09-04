@@ -11,7 +11,6 @@ suppressPackageStartupMessages(library("MUVR"))
 suppressPackageStartupMessages(library("tidyverse"))
 suppressPackageStartupMessages(library("doParallel"))
 suppressPackageStartupMessages(library("optparse"))
-suppressPackageStartupMessages(library("doParallel"))
 
 
 ####################################
@@ -41,7 +40,7 @@ option_list = list(
               metavar="integer"),
   make_option(opt_str = "--n_inner", 
               type = "integer", 
-              default = 4, 
+              default = NULL, 
               help="Number of inner test segments to perform [default= %default]",
               metavar="integer"),
   make_option(c("-m", "--model"), 
@@ -85,6 +84,16 @@ opt_parser = OptionParser(option_list=option_list,
                           epilogue = "Please visit https://cran.r-project.org/web//packages/MVR/MVR.pdf and https://github.com/BleekerLab/random_forest_with_muvr for additional information");
 args = parse_args(opt_parser)
 
+if (is.null(args$n_inner)){
+	args$n_inner = args$n_outer - 1
+	# check if number is an integer (residual modulo equals to 0)
+} else if ((args$n_inner > 0) && (args$n_inner%%1==0)){ 
+	cat("\nUsing",args$n_inner, "number as your n_inner argument.\n")
+} else {
+	cat("\n", "Please provide a positive integer for the n_inner argument.\n")
+}
+
+
 ########################
 # 0.3 Cluster generation
 ########################
@@ -107,7 +116,12 @@ if (grepl("\\.csv$", args$input_file)) {
                 header = T,
                 stringsAsFactors = F,
                 check.names = F)
-} else {
+} else if (grepl("\\.txt$", args$input_file)) {
+  df = read.delim(args$input_file,
+                header = T,
+                stringsAsFactors = F,
+                check.names = F)}
+  else {
   stop("Please make sure your file is either: \n
         comma-separated and ends with .csv or \n
         tab-separated and ends with .tsv)")
