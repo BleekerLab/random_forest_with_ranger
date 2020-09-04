@@ -70,9 +70,9 @@ option_list = list(
               help="(if --best_params flag selected) Step size for best ratio of variables search [default= %default]"),
   make_option(c("-k", "--n_permutations"), 
               type = "integer", 
-              default=100,
+              default=10,
               metavar = "integer",
-              help="Number of permutations [default= %default]"),
+              help="Number of permutations (Usually > 100 and up to 1000) [default= %default]"),
   make_option(c("-p", "--n_cores"), 
               type="integer", 
               default = 1, 
@@ -120,8 +120,8 @@ if (grepl("\\.csv$", args$input_file)) {
   df = read.delim(args$input_file,
                 header = T,
                 stringsAsFactors = F,
-                check.names = F)}
-  else {
+                check.names = F)
+  } else {
   stop("Please make sure your file is either: \n
         comma-separated and ends with .csv or \n
         tab-separated and ends with .tsv)")
@@ -347,16 +347,14 @@ model_permutation_plot <- ggplot(perm_fit_df, aes(x = q2)) +
 ###########################################################
 ### 4.3: extract significant p-values for each variable ###
 ###########################################################
-
 m <- t(features_permuted_pvalues_matrix)
 original_vips <- rf_model$VIP[,args$model]
-n_permutations <- args$n_permutations
 p_values <- vector(mode = "numeric", length = ncol(m))
 
-# Count how many times the original VIP was inferior to permuted VIPs 
-for (i in seq_along(1:nrow(m))) {
-  permuted_vips = as.vector(m[i,])
-  pvalue = sum(original_vips[i] < permuted_vips / n_permutations)
+#Count how many times the original VIP was inferior to permuted VIPs
+for (i in seq_along(1:ncol(m))) {
+  permuted_vips = as.vector(m[,i])
+  pvalue = sum(permuted_vips < original_vips[i])/n_permutations
   p_values[i] = pvalue
 }
 
@@ -364,12 +362,11 @@ for (i in seq_along(1:nrow(m))) {
 p_values[p_values == 0] <- paste("p <",round(1/n_permutations, digits = 3))
 
 # Create final dataframe containing variables + p-values
-features_pvalues_df = 
-  features_permuted_pvalues_matrix %>% 
-  as.data.frame() %>% 
-  rownames_to_column("feature") %>% 
-  mutate(original = original_vips, p_value = p_values)  
-  
+features_pvalues_df =
+  features_permuted_pvalues_matrix %>%
+  as.data.frame() %>%
+  rownames_to_column("feature") %>%
+  mutate(original = original_vips, p_value = p_values)
   
 cat("\n###########################################\n")
 cat("\nSection 4: Permutation analysis completed. \n")
@@ -386,6 +383,7 @@ if (args$best_params == TRUE){
 
 params_df <- data.frame(
     n_cores =        args$n_cores,
+    n_reps  =        args$n_reps,
     n_outer =        args$n_outer,
     n_inner =        args$n_inner,
     var_ratio =      var_ratio,
