@@ -1,0 +1,10 @@
+---
+my_initial_seed: 123
+k_folds: 10               # should be between 5 and 10. 
+my_train_test_ratio: 0.7
+n_permutations: 100       # should be =< 1000 permutations (equivalent to a max p-value treshold of 0.001)
+
+# random forest specific parameters
+n_trees: 10000  
+min_node_size: 3          # minimum number of samples in terminal nodes.  
+---

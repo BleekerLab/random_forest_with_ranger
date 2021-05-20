@@ -4,12 +4,20 @@
 # Section 0: Setup
 ##################
 
+if ("checkpoint" %in% installed.packages()){
+  library("checkpoint")
+  checkpoint("2021-01-01")
+} else {
+  install.packages("checkpoint")
+  library("checkpoint")
+  checkpoint("2021-01-01")
+}
+
 ###############
 # 0.1 Libraries
 ###############
-suppressPackageStartupMessages(library("MUVR"))
+suppressPackageStartupMessages(library("ranger"))
 suppressPackageStartupMessages(library("tidyverse"))
-suppressPackageStartupMessages(library("doParallel"))
 suppressPackageStartupMessages(library("optparse"))
 
 
@@ -20,54 +28,14 @@ suppressPackageStartupMessages(library("optparse"))
 option_list = list(
   make_option(c("-i", "--input_file"), 
               type = "character", 
-              default = "data/housing.csv", 
-              help="Path to input file (n columns for X features, 1 column for response variable), Separation will be infered from file extension (.csv: comma, .tsv: tabulation)", 
+              default = "data/breast-cancer.csv", 
+              help="Path to .csv input file (n columns for X features, 1 column for sample class)", 
               metavar="filename"),
   make_option(c("-o", "--outdir"), 
               type="character", 
               default="rf_results", 
               help="output directory where to store results [default= %default]", 
               metavar="character"),
-  make_option(c("-n", "--n_reps"), 
-              type = "integer", 
-              default = 5, 
-              help="Number of repetitions to perform (set to >= 100 for real runs) [default= %default]",
-              metavar="integer"),
-  make_option(opt_str = "--n_outer", 
-              type = "integer", 
-              default=7, 
-              help="Number of outer test segments to perform [default= %default]",
-              metavar="integer"),
-  make_option(opt_str = "--n_inner", 
-              type = "integer", 
-              default = NULL, 
-              help="Number of inner test segments to perform [default= %default]",
-              metavar="integer"),
-  make_option(c("-m", "--model"), 
-              type="character", 
-              default = "min", 
-              help="Model choice ('min', 'mid' or 'max') [default= %default]"),
-  make_option(opt_str = c("-b", "--best_params"), 
-              action = "store_true",
-              type="logical", 
-              default = FALSE,
-              help="Whether to search for the best variable ratio parameters: TRUE if option is set [default= %default]."),
-  make_option(opt_str = "--variable_ratio", 
-              type="double", 
-              default=0.6, 
-              help="(if --best_params flag selected) Ratio of variables used for feature selection [default= %default]"),
-  make_option(opt_str = "--start_variable_ratio", 
-              type="double", 
-              default=0.6, 
-              help="(if --best_params flag selected) Starting point for best ratio of variables search [default= %default]"),
-  make_option(opt_str = "--stop_variable_ratio", 
-              type="double", 
-              default=0.9, 
-              help="(if --best_params flag selected) End point for best ratio of variables search [default= %default]"),
-  make_option(opt_str = "--step_variable_ratio", 
-              type="double", 
-              default=0.1, 
-              help="(if --best_params flag selected) Step size for best ratio of variables search [default= %default]"),
   make_option(c("-k", "--n_permutations"), 
               type = "integer", 
               default=10,
@@ -80,25 +48,9 @@ option_list = list(
               metavar="integer")
 ) 
 opt_parser = OptionParser(option_list=option_list,
-                          description = "\n A program to perform a Random Forest analysis based on the MUVR R package ",
-                          epilogue = "Please visit https://cran.r-project.org/web//packages/MVR/MVR.pdf and https://github.com/BleekerLab/random_forest_with_muvr for additional information");
+                          description = "\n A program to perform a Random Forest analysis based on the ranger R package ",
+                          epilogue = "Please visit https://cran.r-project.org/web//packages/ranger/ranger.pdf and https://github.com/imbs-hl/ranger for additional information");
 args = parse_args(opt_parser)
-
-if (is.null(args$n_inner)){
-	args$n_inner = args$n_outer - 1
-	# check if number is an integer (residual modulo equals to 0)
-} else if ((args$n_inner > 0) && (args$n_inner%%1==0)){ 
-	cat("\nUsing",args$n_inner, "number as your n_inner argument.\n")
-} else {
-	cat("\n", "Please provide a positive integer for the n_inner argument.\n")
-}
-
-
-########################
-# 0.3 Cluster generation
-########################
-cl = makeCluster(args$n_cores)   
-registerDoParallel(cl)
 
 
 ##################################
@@ -111,26 +63,14 @@ if (grepl("\\.csv$", args$input_file)) {
                   header = T,
                   stringsAsFactors = F,
                   check.names = F)
-} else if (grepl("\\.tsv$", args$input_file)) {
-  df = read.delim(args$input_file,
-                header = T,
-                stringsAsFactors = F,
-                check.names = F)
-} else if (grepl("\\.txt$", args$input_file)) {
-  df = read.delim(args$input_file,
-                header = T,
-                stringsAsFactors = F,
-                check.names = F)
-  } else {
-  stop("Please make sure your file is either: \n
-        comma-separated and ends with .csv or \n
-        tab-separated and ends with .tsv)")
+} else {
+  stop("Please make sure your file is comma-separated and ends with .csv")
 }
 
+# Separate variables and sample class
 n_cols_features = ncol(df) - 1 # all columns should contain features but the last one.
-
-X = df[,1:n_cols_features]
-y = df[,ncol(df)]
+X = df[,2:n_cols_features]     # variables
+y = df[,1]                     # sample class
 
 cat("\n#####################################################################\n")
 cat("\n Section 1: reading file successfully executed!                      \n")
