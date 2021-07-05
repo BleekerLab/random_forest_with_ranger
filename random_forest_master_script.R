@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 
-##################
-# Section 0: Setup
-##################
+#####################################################
+# Section 0: Setup: libraries, command-line arguments
+#####################################################
 
 if ("checkpoint" %in% installed.packages()){
   library("checkpoint")
@@ -18,8 +18,20 @@ if ("checkpoint" %in% installed.packages()){
 ###############
 suppressPackageStartupMessages(library("ranger"))
 suppressPackageStartupMessages(library("tidyverse"))
+suppressPackageStartupMessages(library("assertr"))
 suppressPackageStartupMessages(library("optparse"))
+suppressPackageStartupMessages(library("rlang"))
+suppressPackageStartupMessages(library("gtools")) 
 
+
+######################
+# 0.2 Custom functions
+######################
+
+source("custom_functions/import_and_validate_dataset.R")
+source("custom_functions/create_train_test_set.R")
+source("custom_functions/create_list_of_train_test_sets.R")
+source("custom_functions/compute_cross_validated_kfold_rf.R")
 
 ####################################
 # 0.2 Parsing command-line arguments
@@ -36,16 +48,26 @@ option_list = list(
               default="rf_results", 
               help="output directory where to store results [default= %default]", 
               metavar="character"),
-  make_option(c("-k", "--n_permutations"), 
+  make_option(c("-k", "--k_folds"), 
               type = "integer", 
-              default=10,
+              default = 5,
+              metavar = "integer",
+              help="Number of k-fold cross-validation to be performed (Usually between 5 and 10 folds) [default= %default]"),
+  make_option(c("-n", "--n_permutations"), 
+              type = "integer", 
+              default = 10,
               metavar = "integer",
               help="Number of permutations (Usually > 100 and up to 1000) [default= %default]"),
-  make_option(c("-p", "--n_cores"), 
-              type="integer", 
-              default = 1, 
-              help="Number of cores/CPUs to use (parallel execution) [default= %default]",
-              metavar="integer")
+  make_option(c("-t", "--n_trees"), 
+              type = "integer", 
+              default = 5000,
+              metavar = "integer",
+              help="Number of trees to be build in each individual random forest (Usually > 1000 and up to 10000) [default= %default]"),
+  make_option(c("-s", "--initial_seed"), 
+              type = "integer", 
+              default = 123,
+              metavar = "integer",
+              help="Initial seed used for the analysis [default= %default]")
 ) 
 opt_parser = OptionParser(option_list=option_list,
                           description = "\n A program to perform a Random Forest analysis based on the ranger R package ",
@@ -57,311 +79,51 @@ args = parse_args(opt_parser)
 # Section 1: reading input dataset
 ##################################
 
-# check for file extension
-if (grepl("\\.csv$", args$input_file)) {
-  df = read.csv(args$input_file,
-                  header = T,
-                  stringsAsFactors = F,
-                  check.names = F)
-} else {
-  stop("Please make sure your file is comma-separated and ends with .csv")
-}
-
-# Separate variables and sample class
-n_cols_features = ncol(df) - 1 # all columns should contain features but the last one.
-X = df[,2:n_cols_features]     # variables
-y = df[,1]                     # sample class
+df <- import_and_validate_dataset(file_path = args$input_file)
 
 cat("\n#####################################################################\n")
 cat("\n Section 1: reading file successfully executed!                      \n")
 cat("\n",nrow(df), "observations are present in your dataset.               \n")
-cat("\n",ncol(df) - 1, "features will be considered.                        \n")
-cat("\n The column named ",colnames(df)[ncol(df)], "will be used as your Y  \n")
+cat("\n",ncol(df) - 1, "features/variables will be considered.              \n")
+cat("\n The column named",colnames(df)[1], "will be used as your Y          \n")
 cat("\n#####################################################################\n")
 
 
-###############################################
-# Section 2: Optional search for best parameters
-###############################################
-if (args$best_params == TRUE){
-  
-  # grid search params
-  start_ratio <- args$start_variable_ratio
-  end_ratio <-   args$stop_variable_ratio
-  step_ratio <-  args$step_variable_ratio
-  
-  hyper_grid <- expand.grid(
-    ratio     = seq(from = start_ratio, 
-                    to   = end_ratio, 
-                    by   = step_ratio),
-    q2     = 0 # will be used to collect the Q2 metric for each RF model
-  )
-  
-  for (i in 1:nrow(hyper_grid)){
-    print(paste0("testing parameter combination ", i, " out of ", nrow(hyper_grid)))
-    
-    rf_model <- MUVR(X =        X, 
-                     Y =        y,
-                     nRep =     args$n_reps,
-                     nOuter =   args$n_outer,
-                     nInner =   args$n_inner,
-                     varRatio = hyper_grid$ratio[i],
-                     scale =    FALSE, 
-                     DA =       FALSE, 
-                     fitness =  "RMSEP", 
-                     method =   "RF", 
-                     parallel = TRUE)
-    
-    if (args$model == "min"){
-      hyper_grid$q2[i] <- rf_model$fitMetric$Q2[1] # min model
-    } else if (args$model == "mid") {
-      hyper_grid$q2[i] <- rf_model$fitMetric$Q2[2] # mid model
-    } else if (args$model == "max") {
-      hyper_grid$q2[i] <- rf_model$fitMetric$Q2[3] # max model
-    } else {
-      stop("please make sure you choose either 'min', 'mid' or 'max' as model")
-    }
-  }
-  
-  # extract the best parameters
-  best_params <- hyper_grid[which.max(hyper_grid$q2),]
 
-  # plot evolution of Q2 against parameters
-  optimization_plot <- hyper_grid %>% 
-    mutate(ratio = as.factor(ratio)) %>% 
-    rownames_to_column("combination") %>% 
-    mutate(combination = as.numeric(combination)) %>% 
-    ggplot(., aes(combination, y = q2)) + 
-    geom_point() + 
-    scale_y_continuous(limits = c(0,1))
-  
-  cat("\n#####################################################################\n")
-  cat("\nSection 2: searching for best parameters done!                       \n")
-  cat("\nUsing ", best_params$ratio," as variable ratio                       \n")
-  cat("\n#####################################################################\n")
-  
-} else {
-  cat("\n#####################################################################\n")
-  cat("\nSection 2: searching for best parameters skipped.                    \n")
-  cat("\nPlease add the --best_params flag if you'd like to perform this step.\n")
-  cat("\nUsing ", args$variable_ratio," as variable ratio                     \n")
-  cat("\n#####################################################################\n")
-}
+#######################################################################################
+# Section 2: Compute Random Forest k-fold cross-validation analysis on original dataset
+#            Returns k_folds model accuracies
+#            Returns k_folds variable importances
+#######################################################################################
+
+# pseudocode
+# Step 1: create a list of k_fold train and test datasets
+# Step 2a: run ranger RF on each of the f_fold train/test pair 
+# Step 2b: calculate the model classification accuracy for each k_fold iteration
+# Step 2c: retrieve the variable importances and create a dataframe
 
 
-##############################################################################
-# Section 3: Random Forest analysis *with* best parameters on original dataset
-##############################################################################
 
-if (args$best_params == TRUE){
-  # using best params
-  rf_model <- MUVR(X =        X, 
-                   Y =        y,
-                   nRep =     args$n_reps,
-                   nOuter =   args$n_outer,
-                   nInner =   args$n_inner,
-                   varRatio = best_params$ratio,
-                   scale =    FALSE, 
-                   DA =       FALSE, 
-                   fitness =  "RMSEP", 
-                   method =   "RF", 
-                   parallel = TRUE)
-} else {
-  rf_model <- MUVR(X =        X, 
-                   Y =        y,
-                   nRep =     args$n_reps,
-                   nOuter =   args$n_outer,
-                   nInner =   args$n_inner,
-                   varRatio = args$variable_ratio,
-                   scale =    FALSE, 
-                   DA =       FALSE, 
-                   fitness =  "RMSEP", 
-                   method =   "RF", 
-                   parallel = TRUE)
-}
+# Step 1: create a list of k_fold train and test datasets
+train_test_sets <- create_kfold_train_test_sets(mydata = df, 
+                                                myseed = args$initial_seed, 
+                                                .k_folds = args$k_folds)
 
-if (args$model == "min"){
-  model_original_q2 <- rf_model$fitMetric$Q2[1] # min model
-} else if (args$model == "mid") {
-  model_original_q2 <- rf_model$fitMetric$Q2[2] # mid model
-} else if (args$model == "max") {
-  model_original_q2 <- rf_model$fitMetric$Q2[3] # max model
-} 
-
-cat("\n#####################################################################\n")
-cat("\nSection 3: Random Forest analysis on original dataset completed.     \n")
-cat("\n RF model Q2 is equal to: ", model_original_q2,                     "\n")
-cat("\n#####################################################################\n")
-
-#################################
-# Section 4: Permutation analysis
-#################################
-
-###############################
-# 4.1: permutations 
-# compute permuted models 
-# collect Q2 from permutations
-##############################
-n_permutations <- args$n_permutations
-perm_fit = numeric(n_permutations)
-
-# computed permuted models
-# collect permuted feature importances
-features_permuted_pvalues_matrix <- matrix(0, 
-                                           nrow = ncol(X), # One row = one feature
-                                           ncol = n_permutations)
-
-rownames(features_permuted_pvalues_matrix) = colnames(X)
-colnames(features_permuted_pvalues_matrix) = paste0("permutation",seq(1:n_permutations))
+# Step 2a: run ranger RF on each of the f_fold train/test pair 
+# Step 2b: calculate the model classification accuracy for each k_fold iteration
+# Step 2c: retrieve the variable importances and create a dataframe
+cv_rf_results <- compute_kfold_cv_rf(list_of_train_test_sets = train_test_sets, .num_trees = args$n_trees)
 
 
-if (args$best_params == TRUE){
-  var_ratio = best_params$ratio
-} else {
-  var_ratio = args$variable_ratio
-}
-
-# permutations
-cat("\nStarting permutations")
-for (p in 1:n_permutations) {
-  cat('\nPermutation',p,'of', n_permutations)
-  YPerm = sample(y)
-  perm = MUVR(X         = X, 
-              Y         = YPerm,
-              nRep      = args$n_reps,
-              nInner    = args$n_inner,
-              nOuter    = args$n_outer,
-              varRatio  = var_ratio,
-              scale     = FALSE, 
-              DA        = FALSE, 
-              fitness   = "RMSEP", 
-              method    = "RF", 
-              parallel  = TRUE)
-  # for model
-  if (args$model == "min"){
-    perm_fit[p] <- perm$fitMetric$Q2[1] # min model
-  } else if (args$model == "mid") {
-    perm_fit[p] <- perm$fitMetric$Q2[2] # mid model
-  } else if (args$model == "max") {
-    perm_fit[p] <- perm$fitMetric$Q2[3] # max model
-  } 
-
-  # for each variable
-  features_permuted_pvalues_matrix[,p] = as.vector(perm$VIP[,args$model])
-}
-
-###########################################################
-### 4.2: plot of RF model (actual fit vs permuted fits) ###
-###########################################################
-
-# actual (original RF model)
-if (args$model == "min"){
-  actual_fit <- rf_model$fitMetric$Q2[1] # min model
-} else if (args$model == "mid") {
-  actual_fit <- rf_model$fitMetric$Q2[2] # mid model
-} else if (args$model == "max") {
-  actual_fit <- rf_model$fitMetric$Q2[3] # max model
-} 
-
-# Parametric (Student’s) permutation test significance
-pvalue <- pPerm(actual = actual_fit, 
-                h0 = perm_fit,
-                side = "greater",
-                type = "t")
+###################################################################################
+# Section 6: plot mean/sd model accuracy versus distribution of permuted accuracies 
+###################################################################################
 
 
-perm_fit_df = data.frame(
-  permutation = seq(1:length(perm_fit)), 
-  q2 = perm_fit) 
-
-model_permutation_plot <- ggplot(perm_fit_df, aes(x = q2)) + 
-  geom_histogram(bins = 10) + 
-  geom_vline(xintercept = actual_fit, col = "blue") + 
-  labs(x = "Q2 metric", y = "Frequency") +
-  ggtitle(paste("Distribution of Q2 p-values based on \n",
-                n_permutations,
-                "permutations of the Y variable \n p-value = ",
-                format(pvalue,digits = 3, decimal.mark = "."),sep = " "
-                ))
-
-###########################################################
-### 4.3: extract significant p-values for each variable ###
-###########################################################
-m <- t(features_permuted_pvalues_matrix)
-original_vips <- rf_model$VIP[,args$model]
-p_values <- vector(mode = "numeric", length = ncol(m))
-
-#Count how many times the original VIP was inferior to permuted VIPs
-for (i in seq_along(1:ncol(m))) {
-  permuted_vips = as.vector(m[,i])
-  pvalue = sum(permuted_vips < original_vips[i])/n_permutations
-  p_values[i] = pvalue
-}
-
-# Values equal to 0 are impossible so replace with inferior to threshold 1/N permutations
-p_values[p_values == 0] <- paste("p <",round(1/n_permutations, digits = 3))
-
-# Create final dataframe containing variables + p-values
-features_pvalues_df =
-  features_permuted_pvalues_matrix %>%
-  as.data.frame() %>%
-  rownames_to_column("feature") %>%
-  mutate(original = original_vips, p_value = p_values)
-  
-cat("\n###########################################\n")
-cat("\nSection 4: Permutation analysis completed. \n")
-cat("\n###########################################\n")
-
-#########################
-# Section 5: save results
-#########################
-if (args$best_params == TRUE){
-  var_ratio = best_params$ratio
-} else {
-  var_ratio = args$variable_ratio
-}
-
-params_df <- data.frame(
-    n_cores =        args$n_cores,
-    n_reps  =        args$n_reps,
-    n_outer =        args$n_outer,
-    n_inner =        args$n_inner,
-    var_ratio =      var_ratio,
-    n_permutations = args$n_permutations,
-    model =          args$model)
+###################################################################################
+# Section 6: plot mean/sd model accuracy versus distribution of permuted accuracies 
+###################################################################################
 
 
-dir.create(path = args$outdir, showWarnings = FALSE, recursive = TRUE)
-
-if (args$best_params == TRUE){
-  save(df,
-       X,
-       y,
-       rf_model,
-       params_df,
-       hyper_grid,         # --best_params flag "on"
-       optimization_plot,  # --best_params flag "on"
-       model_permutation_plot,
-       features_pvalues_df,
-       file = file.path(args$outdir, "rf_analysis.RData"),
-       compress = "gzip",
-       compression_level = 6)
-} else {
-  save(df,
-       X,
-       y,
-       rf_model,
-       params_df,
-       model_permutation_plot,
-       features_pvalues_df,
-       file = file.path(args$outdir, "rf_analysis.RData"),
-       compress = "gzip",
-       compression_level = 6)
-}
-
-cat("\n############################################################################\n")
-cat("\nSection 5: Results saved to", file.path(args$outdir, "rf_analysis.RData"), "\n")
-cat("\n############################################################################\n")
-
-
-stopCluster(cl)
+# Step 1: crunch numbers = calculate original CV mean/sd model accuracy before plotting
+# Step 2: crunch numbers = calculate original mean/sd variable importance before plotting
