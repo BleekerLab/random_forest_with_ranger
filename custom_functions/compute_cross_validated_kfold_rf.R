@@ -1,5 +1,12 @@
 # Function to run one ranger RF analysis
+# The number of k-folds is determined by the length of the train_test_set list
+#
 # @param .list_of_train_test_sets: a list that contains split train/test sets. 1 train/test pair per list item
+# @param .num_trees: number of tree estimators to be created
+# @param .importance: criteria for variable importance measurements. "impurity" is the Gini index
+#
+# @return Returns the model k-fold accuracies and k-fold importances per variable
+
 compute_kfold_cv_rf <- function(list_of_train_test_sets, 
                                 .num_trees = 5000, 
                                 .importance = "impurity"){

@@ -18,7 +18,7 @@ if ("checkpoint" %in% installed.packages()){
 ###############
 suppressPackageStartupMessages(library("ranger"))
 suppressPackageStartupMessages(library("tidyverse"))
-suppressPackageStartupMessages(library("assertr"))
+suppressPackageStartupMessages(library("assertthat"))
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("rlang"))
 suppressPackageStartupMessages(library("gtools")) 
@@ -32,6 +32,7 @@ source("custom_functions/import_and_validate_dataset.R")
 source("custom_functions/create_train_test_set.R")
 source("custom_functions/create_list_of_train_test_sets.R")
 source("custom_functions/compute_cross_validated_kfold_rf.R")
+source("custom_functions/calculate_model_accuracy.R")
 
 ####################################
 # 0.2 Parsing command-line arguments
@@ -112,11 +113,43 @@ train_test_sets <- create_kfold_train_test_sets(mydata = df,
 # Step 2a: run ranger RF on each of the f_fold train/test pair 
 # Step 2b: calculate the model classification accuracy for each k_fold iteration
 # Step 2c: retrieve the variable importances and create a dataframe
-cv_rf_results <- compute_kfold_cv_rf(list_of_train_test_sets = train_test_sets, .num_trees = args$n_trees)
+cv_rf_results <- compute_kfold_cv_rf(
+  list_of_train_test_sets = train_test_sets,
+  .num_trees = args$n_trees
+  )
 
+
+
+###################################################################################################
+# Section 3: create a series of dataframes and compute random model accuracies and var. importances 
+###################################################################################################
+
+list_of_permuted_dfs <- create_list_of_permuted_dataframes(.df = df, 
+                                                           .initial_seed = args$initial_seed, 
+                                                           .n_permutations = args$n_permutations)
+
+
+# creates a list of seeds for the n_permutations
+seeds <- map_dbl(.x = seq_along(1:args$n_permutations), 
+                   .f = function(x){args$initial_seed + x})
+
+
+train_test_permuted_sets <- map2(.x = list_of_permuted_dfs, 
+                                 .y = seeds, 
+                                 .f = function(x,y) 
+                                   create_kfold_train_test_sets(
+                                                mydata = x, 
+                                                myseed = y, 
+                                                .k_folds = args$k_folds)
+                                 )
+
+cv_rf_results_on_permuted_dfs <- 
+  map(.x = train_test_permuted_sets, 
+      .f = function(x)(compute_kfold_cv_rf(x,
+                                           .num_trees = args$n_trees)))
 
 ###################################################################################
-# Section 6: plot mean/sd model accuracy versus distribution of permuted accuracies 
+# Section 36: plot mean/sd model accuracy versus distribution of permuted accuracies 
 ###################################################################################
 
 

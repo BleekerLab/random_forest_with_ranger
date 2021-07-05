@@ -4,6 +4,8 @@
 # @param df:       Dataframe with sample class in the first column and variables in the other columns
 # @param myseed:   The initial seed value used for the analysis 
 # @param .k_folds: The number of splits during the cross-validation procedure 
+#
+# @return Returns a list (length = k_folds) of test and train datasets 
 create_kfold_train_test_sets <- function(mydata = df, 
                                          myseed = initial_seed, 
                                          .k_folds = 5){

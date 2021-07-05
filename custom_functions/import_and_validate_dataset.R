@@ -13,13 +13,11 @@ import_and_validate_dataset <- function(file_path){
   }
   
   # The first column has to contain character values not numbers, etc. 
-  # This in order to be transformed into a factor for RF
+  # This character column will be transformed into a factor for RF classification
   col_to_test <- colnames(df)[1]
-  assert(data = df, 
-         predicate = is.character,       # has to return TRUE
-         col_to_test,                    # the sample class column
-         success_fun = success_logical)  # returns TRUE if assert is successful
-  # convert sample class into a factor
+  assertthat::assert_that(is.character(col_to_test))
+  
+  # convert first column into a factor
   df[,1] <- as.factor(df[,1])
   
   return(df)
