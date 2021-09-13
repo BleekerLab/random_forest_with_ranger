@@ -9,7 +9,6 @@ get_ranger_model_accuracy <- function(.test_set, .ranger_model){
   # get sample class based on their variable measurements
   predicted_sample_classes <- predict(.ranger_model, .test_set)
   
-  # 
   # count success = good sample classification
   number_of_success <- 
     data.frame(predicted = predicted_sample_classes$predictions,

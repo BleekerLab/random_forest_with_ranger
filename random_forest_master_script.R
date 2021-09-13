@@ -32,7 +32,7 @@ source("custom_functions/import_and_validate_dataset.R")
 source("custom_functions/create_train_test_set.R")
 source("custom_functions/create_list_of_train_test_sets.R")
 source("custom_functions/compute_cross_validated_kfold_rf.R")
-source("custom_functions/calculate_model_accuracy.R")
+source("custom_functions/get_ranger_model_accuracy.R")
 source("custom_functions/create_list_of_permuted_dataframes.R")
 source("custom_functions/permute_dataframe.R")
 source("custom_functions/get_accuracies_from_permuted_cv_rf_results.R")
@@ -110,8 +110,6 @@ cat("\n#####################################################################\n")
 # Step 2b: calculate the model classification accuracy for each k_fold iteration
 # Step 2c: retrieve the variable importances and create a dataframe
 
-
-
 # Step 1: create a list of k_fold train and test datasets
 train_test_sets <- create_kfold_train_test_sets(mydata = df, 
                                                 myseed = args$initial_seed, 
@@ -122,7 +120,8 @@ train_test_sets <- create_kfold_train_test_sets(mydata = df,
 # Step 2c: retrieve the variable importances and create a dataframe
 cv_rf_results <- compute_kfold_cv_rf(
   list_of_train_test_sets = train_test_sets,
-  .num_trees = args$n_trees
+  .num_trees = args$n_trees,
+  .importance = "impurity"
   )
 
 
