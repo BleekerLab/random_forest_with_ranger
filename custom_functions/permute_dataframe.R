@@ -8,7 +8,7 @@
 permute_dataframe_on_y_column <- function(df, 
                                           .myseed = initial_seed){
   # myseed has to be an integer e.g. 123
-  assert_that(is.numeric(myseed))
+  assert_that(is.numeric(.myseed))
 
   # extract original y vector of classes
   y <- df[,1] 

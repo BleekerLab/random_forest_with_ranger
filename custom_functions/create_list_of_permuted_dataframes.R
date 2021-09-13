@@ -13,7 +13,7 @@ create_list_of_permuted_dataframes <- function(.df,
                    .f = function(x){.initial_seed + x})
   
   list_of_permuted_dataframes <- map(.x = seeds,           
-                                      function(x)(permute_dataframe_on_y_column(.df, myseed = x))
+                                      function(x)(permute_dataframe_on_y_column(.df, .myseed = x))
                                      )
   
   return(list_of_permuted_dataframes)

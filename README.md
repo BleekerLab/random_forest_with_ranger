@@ -6,7 +6,7 @@ First column must contain the sample class. It must be a character not a number.
 All other columns must contain variable measurements. 
 
 **Example:**
-An example is given below. The first column is called "class" and contains the sample class for breast cancer tumors. 
+An example is given below. The first column is called "sample_class" and contains the sample class for breast cancer tumors. 
 It has two levels "benign" or "malign". 
 
 | sample_class  	| clump 	| uniformity_cell_size 	| uniformity_cell_shape 	| adhesion 	| epithelial_cell_size 	| bare_nuclei 	| chromatin 	| nucleoli 	| mitoses 	|
@@ -21,4 +21,8 @@ It has two levels "benign" or "malign".
 | benign 	| 2     	| 1                    	| 2                     	| 1        	| 2                    	| 1           	| 3         	| 1        	| 1       	|
 | benign 	| 2     	| 1                    	| 1                     	| 1        	| 2                    	| 1           	| 1         	| 1        	| 5       	|
 
+## Outputs
 
+### Plots
+
+### Table of candidates
