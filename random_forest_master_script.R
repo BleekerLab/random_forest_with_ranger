@@ -74,7 +74,12 @@ option_list = list(
               type = "integer", 
               default = 123,
               metavar = "integer",
-              help="Initial seed used for the analysis [default= %default]")
+              help="Initial seed used for the analysis [default= %default]"),
+  make_option(c("-p", "--threads"), 
+              type = "integer", 
+              default = 1,
+              metavar = "integer",
+              help="Number of threads to be used [default= %default]")
 ) 
 opt_parser = OptionParser(option_list=option_list,
                           description = "\n A program to perform a Random Forest analysis based on the ranger R package ",
@@ -121,6 +126,7 @@ train_test_sets <- create_kfold_train_test_sets(mydata = df,
 cv_rf_results <- compute_kfold_cv_rf(
   list_of_train_test_sets = train_test_sets,
   .num_trees = args$n_trees,
+  .num.threads = args$threads,
   .importance = "impurity"
   )
 
@@ -154,7 +160,8 @@ train_test_permuted_sets <- map2(.x = list_of_permuted_dfs,
 cv_rf_results_on_permuted_dfs <- 
   map(.x = train_test_permuted_sets, 
       .f = function(x)(compute_kfold_cv_rf(x,
-                                           .num_trees = args$n_trees)))
+                                           .num_trees = args$n_trees, 
+                                           .num.threads = args$threads)))
 
 # Average random model accuracy
 random_model_accuracies <- 
@@ -226,5 +233,6 @@ write.csv(x = original_var_importances,
           file = file.path(args$outdir, "feature_gini_impurity_and_pvalues.csv"), 
           row.names = FALSE, 
           quote = FALSE)
+
 
 

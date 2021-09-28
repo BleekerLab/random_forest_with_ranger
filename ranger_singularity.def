@@ -1,0 +1,26 @@
+BootStrap: docker
+From: rocker/r-ver:3.6.2
+
+%post
+    apt-get -y update
+    apt-get clean
+
+%labels
+    Author Marc Galland, University of Amsterdam, NL
+    Version v0.0.1
+
+
+%help
+    A container to run a Random Forest analysis based on the Ranger package. 
+    GitHub repository: https://github.com/BleekerLab/random_forest_with_ranger/
+    https://cran.r-project.org/web/packages/ranger/index.html
+
+
+%files
+    custom_functions/ custom_functions/
+    random_forest_master_script.R /random_forest_master_script.R 
+
+
+%runscript
+    #!/bin/bash
+    Rscript --vanilla random_forest_master_script.R 

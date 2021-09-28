@@ -9,7 +9,8 @@
 
 compute_kfold_cv_rf <- function(list_of_train_test_sets, 
                                 .num_trees = 5000, 
-                                .importance = "impurity"){
+                                .importance = "impurity",
+                                .num.threads = 1){
   
   # extract train/test pairs
   train_sets <- map(list_of_train_test_sets, 1)
